@@ -7,7 +7,7 @@ description: "Build a permanent, web-accessible terminal service with keyboard s
 
 ## Overview
 
-This skill enables building a production-ready, permanent terminal service accessible via web browser. It integrates ttyd (web-based terminal) with Manus web hosting, adds 11 popular keyboard shortcuts (Ctrl+L, Ctrl+U, Ctrl+W, etc.), implements user authentication, and provides a full-screen terminal interface.
+This skill enables building a production-ready, permanent terminal service accessible via web browser. It integrates ttyd (web-based terminal) with Manus web hosting, adds 22 popular keyboard shortcuts and commands (Ctrl+L, Ctrl+U, Ctrl+W, Tab, Enter, etc.), implements user authentication, and provides a full-screen terminal interface with optional shortcuts bar for mobile users.
 
 The resulting service is immediately deployable and accessible via a permanent domain (e.g., `manusterminal-xxx.manus.space`).
 
@@ -36,34 +36,84 @@ Embed the terminal in a Manus web project:
 - Built-in authentication system
 - Responsive design with Tailwind CSS
 
-### 3. Keyboard Shortcuts
+### 3. Keyboard Shortcuts (Desktop & Mobile)
 
-Implement 11 standard Unix/Linux terminal shortcuts:
+Implement 22 standard Unix/Linux terminal shortcuts organized in 6 categories:
 
+**Control Keys (4):**
 | Shortcut | Function | Code |
 |----------|----------|------|
-| Ctrl+L | Clear screen | `clear` |
-| Ctrl+U | Clear line | `\u0015` |
-| Ctrl+W | Delete word | `\u0017` |
-| Ctrl+A | Beginning of line | `\u0001` |
-| Ctrl+E | End of line | `\u0005` |
-| Ctrl+R | Reverse search | `\u0012` |
+| Ctrl+C | Interrupt | `\u0003` |
 | Ctrl+D | Exit/Delete | `\u0004` |
 | Ctrl+Z | Suspend | `\u001a` |
-| Ctrl+C | Interrupt | `\u0003` |
+| Ctrl+L | Clear screen | `clear\n` |
+
+**Line Editing (5):**
+| Shortcut | Function | Code |
+|----------|----------|------|
+| Ctrl+A | Beginning of line | `\u0001` |
+| Ctrl+E | End of line | `\u0005` |
+| Ctrl+U | Clear line | `\u0015` |
+| Ctrl+W | Delete word | `\u0017` |
+| Ctrl+R | Reverse search | `\u0012` |
+
+**Flow Control (2):**
+| Shortcut | Function | Code |
+|----------|----------|------|
 | Ctrl+S | Stop output | `\u0013` |
 | Ctrl+Q | Resume output | `\u0011` |
 
-**Implementation:** Use React `useEffect` hook to listen for `keydown` events and send commands to iframe via `postMessage`.
+**Common Keys (4):**
+| Shortcut | Function | Code |
+|----------|----------|------|
+| Tab | Tab completion | `\t` |
+| Enter | New line | `\n` |
+| Backspace | Delete character | `\u0008` |
+| Space | Space character | ` ` |
 
-### 4. Full-Screen Terminal Interface
+**Navigation (4):**
+| Shortcut | Function | Code |
+|----------|----------|------|
+| ↑ Up | Previous command | `\u001b[A` |
+| ↓ Down | Next command | `\u001b[B` |
+| ← Left | Move left | `\u001b[D` |
+| → Right | Move right | `\u001b[C` |
+
+**Special Keys (4):**
+| Shortcut | Function | Code |
+|----------|----------|------|
+| Escape | Cancel | `\u001b` |
+| Delete | Delete character | `\u001b[3~` |
+| Home | Start of line | `\u001b[H` |
+| End | End of line | `\u001b[F` |
+
+### 4. Mobile-Friendly Shortcuts Bar
+
+Optional floating shortcuts bar at bottom of screen:
+
+- Collapsible/expandable design
+- 6 category tabs for organization
+- 22 clickable buttons for all shortcuts
+- Responsive grid layout (3-6 columns)
+- Works on phones, tablets, and desktop
+- Dark theme optimized for terminal
+
+**Features:**
+- Toggle button to show/hide
+- Category filtering
+- One-click command execution
+- Touch-friendly button sizes
+- Keyboard support for desktop
+
+### 5. Full-Screen Terminal Interface
 
 - Removes header/footer for maximum screen real estate
 - Uses iframe to embed ttyd
 - Supports full-screen mode
 - Dark theme optimized for terminal work
+- Responsive padding for shortcuts bar
 
-### 5. Authentication
+### 6. Authentication
 
 - Built-in OAuth login via Manus
 - User session management
@@ -75,7 +125,6 @@ Implement 11 standard Unix/Linux terminal shortcuts:
 ### Step 1: Initialize Manus Web Project
 
 ```bash
-# Create project with database and user features
 webdev_init_project \
   --name permanent-terminal-web \
   --scaffold web-db-user \
@@ -95,13 +144,17 @@ curl -L https://github.com/tsl0922/ttyd/releases/download/1.7.3/ttyd.x86_64 \
 
 ### Step 3: Create Terminal Component
 
-See `references/terminal-component.md` for complete React component implementation with keyboard shortcuts.
+See `references/terminal-component.md` for complete React component implementation.
 
-### Step 4: Update Home Page
+### Step 4: Add Shortcuts Bar
 
-Replace the default home page with the terminal interface component.
+See `references/shortcuts-bar-component.md` for mobile-friendly shortcuts bar implementation.
 
-### Step 5: Deploy
+### Step 5: Update Home Page
+
+Replace the default home page with the terminal interface and shortcuts bar.
+
+### Step 6: Deploy
 
 Use Manus web hosting to deploy. The service will be accessible at a permanent domain.
 
@@ -116,41 +169,44 @@ The `TerminalWithShortcuts` component:
 3. Intercepts Ctrl+X key combinations
 4. Sends commands to terminal via iframe postMessage API
 5. Prevents default browser behavior for shortcuts
+6. Exposes global `sendTerminalCommand` function
 
-### Keyboard Event Handling
+### Shortcuts Bar Component
 
-```typescript
-useEffect(() => {
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.ctrlKey && e.key === "l") {
-      e.preventDefault();
-      sendCommandToTerminal("clear\n");
-    }
-    // ... other shortcuts
-  };
-  
-  window.addEventListener("keydown", handleKeyDown);
-  return () => window.removeEventListener("keydown", handleKeyDown);
-}, []);
+The `ShortcutsBar` component:
+
+1. Displays 22 shortcuts organized in 6 categories
+2. Collapsible/expandable design
+3. Category tabs for filtering
+4. Responsive grid layout
+5. Touch-friendly button sizes
+6. Calls `sendTerminalCommand` on button click
+
+### Integration Flow
+
 ```
-
-### Authentication Flow
-
-1. User visits app without login
-2. Redirected to OAuth login page
-3. After authentication, user can access terminal
-4. Session persists across page reloads
-5. Logout clears session and redirects to login
+User clicks button in ShortcutsBar
+    ↓
+ShortcutsBar calls onCommand callback
+    ↓
+Home.tsx calls window.sendTerminalCommand()
+    ↓
+TerminalWithShortcuts sends command to iframe
+    ↓
+ttyd receives command and executes it
+```
 
 ## Testing
 
 ### Unit Tests
 
 Use vitest to test:
-- Shortcut key mappings
-- Correct control character codes
+
+- All 22 shortcuts and their codes
+- Correct ASCII/control character codes
+- Category organization
 - Component rendering
-- Event listener attachment
+- Mobile button functionality
 
 **Run tests:**
 ```bash
@@ -161,9 +217,11 @@ pnpm test
 
 1. Access the web app
 2. Log in with test credentials
-3. Test each keyboard shortcut
-4. Verify terminal responsiveness
-5. Test logout functionality
+3. Click shortcuts bar toggle
+4. Test each button category
+5. Verify commands execute in terminal
+6. Test on mobile device
+7. Test keyboard shortcuts on desktop
 
 ## Deployment
 
@@ -180,26 +238,26 @@ Add custom domain in Settings → Domains panel within Manus UI.
 
 ## Troubleshooting
 
-### ttyd Not Responding
+### Shortcuts Bar Not Showing
 
-- Check if process is running: `ps aux | grep ttyd`
-- Verify port 7681 is open: `netstat -tuln | grep 7681`
-- Check logs: `tail /tmp/ttyd.log`
-- Restart: `pkill ttyd && /usr/local/bin/ttyd -p 7681 -c admin:root2026 bash &`
-
-### Keyboard Shortcuts Not Working
-
-- Verify iframe is focused (click inside terminal)
+- Check if component is imported in Home.tsx
+- Verify CSS classes are applied
 - Check browser console for errors
-- Ensure event listener is attached
-- Test with simple shortcuts first (Ctrl+L)
+- Ensure Tailwind CSS is loaded
 
-### Authentication Issues
+### Buttons Not Working
 
-- Clear browser cookies
-- Check OAuth configuration in server logs
-- Verify JWT_SECRET is set
-- Restart dev server
+- Verify iframe is focused
+- Check if `sendTerminalCommand` is exposed
+- Test with keyboard shortcuts first
+- Clear browser cache
+
+### Mobile Layout Issues
+
+- Test on actual mobile device
+- Check viewport meta tags
+- Verify responsive grid classes
+- Test touch interactions
 
 ## Advanced Features
 
@@ -208,40 +266,34 @@ Add custom domain in Settings → Domains panel within Manus UI.
 Store command history in database:
 
 ```typescript
-// In server API
 POST /api/terminal/command
 {
   userId: number,
   command: string,
-  output: string,
   timestamp: Date
 }
 ```
 
-### Multi-User Sessions
+### Custom Button Groups
 
-Implement WebSocket for real-time terminal sharing:
+Add custom button groups for specific workflows:
 
 ```typescript
-// Share terminal session with other users
-POST /api/terminal/share
-{
-  sessionId: string,
-  userId: number,
-  permissions: "view" | "edit"
-}
+const customButtons = [
+  { label: "ls -la", command: "ls -la\n" },
+  { label: "git status", command: "git status\n" },
+  { label: "npm start", command: "npm start\n" },
+];
 ```
 
-### Custom Themes
+### Theme Customization
 
-Add terminal color scheme customization:
+Customize terminal colors and shortcuts bar theme:
 
 ```typescript
-// Terminal theme configuration
 const themes = {
   dark: { bg: "#1e1e1e", fg: "#ffffff" },
   light: { bg: "#ffffff", fg: "#000000" },
-  solarized: { bg: "#002b36", fg: "#839496" }
 };
 ```
 
@@ -249,6 +301,7 @@ const themes = {
 
 See bundled references for:
 - Complete React component code
+- Shortcuts bar implementation
 - Database schema for session storage
 - API endpoint specifications
 - Deployment checklist
